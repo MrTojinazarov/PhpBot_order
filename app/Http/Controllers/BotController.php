@@ -36,9 +36,13 @@ class BotController extends Controller
     {
         try {
             $data = $request->all();
-            $chat_id = $data['message']['chat']['id'];
+            $chat_id = $data['message']['chat']['id'] ?? null;
             $text = $data['message']['text'] ?? null;
             $photo = $data['message']['photo'] ?? null;
+            $call = $data['callback_query'] ?? null;
+            $message_id = $data['message']['message_id'] ?? null;
+            $call_id = $data['callback_query']['message']['chat']['id'] ?? null;
+            $callmid = $data['callback_query']['message']['message_id'] ?? null;
 
             if ($text === '/start') {
                 $this->store($chat_id, "Assalomu alaykum! Iltimos, tanlang:", [
@@ -56,11 +60,18 @@ class BotController extends Controller
 
             if ($text === 'Register') {
                 Cache::put("register_step_{$chat_id}", 'name');
-                $this->store($chat_id, "Iltimos, ismingizni kiriting:");
+                $this->store($chat_id, "Iltimos, ismingizni kiriting:", [
+                    'remove_keyboard' => true,
+                ]);
                 return;
             }
 
             if (Cache::get("register_step_{$chat_id}") === 'name') {
+                if (strlen($text) < 2) {
+                    $this->store($chat_id, "Ism kamida 2 ta belgidan iborat bo‘lishi kerak!");
+                    return;
+                }
+
                 Cache::put("register_name_{$chat_id}", $text);
                 Cache::put("register_step_{$chat_id}", 'email');
                 $this->store($chat_id, "Iltimos, elektron pochta manzilingizni kiriting:");
@@ -68,6 +79,16 @@ class BotController extends Controller
             }
 
             if (Cache::get("register_step_{$chat_id}") === 'email') {
+                if (!filter_var($text, FILTER_VALIDATE_EMAIL)) {
+                    $this->store($chat_id, "Iltimos, haqiqiy email manzil kiriting!");
+                    return;
+                }
+
+                if (User::where('email', $text)->exists()) {
+                    $this->store($chat_id, "Bu email allaqachon ro'yxatdan o'tgan!");
+                    return;
+                }
+
                 Cache::put("register_email_{$chat_id}", $text);
                 Cache::put("register_step_{$chat_id}", 'password');
                 $this->store($chat_id, "Iltimos, parolingizni kiriting:");
@@ -75,11 +96,15 @@ class BotController extends Controller
             }
 
             if (Cache::get("register_step_{$chat_id}") === 'password') {
+                if (strlen($text) < 6) {
+                    $this->store($chat_id, "Parol kamida 6 ta belgidan iborat bo‘lishi kerak!");
+                    return;
+                }
+
                 Cache::put("register_password_{$chat_id}", $text);
                 Cache::put("register_step_{$chat_id}", 'confirmation_code');
 
                 $confirmation_code = Str::random(6);
-
                 $email = Cache::get("register_email_{$chat_id}");
                 $name = Cache::get("register_name_{$chat_id}");
 
@@ -147,14 +172,12 @@ class BotController extends Controller
                                 "Chat ID: " . $chat_id;
 
                             $replyMarkup = [
-                                'keyboard' => [
+                                'inline_keyboard' => [
                                     [
-                                        ['text' => 'Tasdiqlash✅'],
-                                        ['text' => 'Bekor qilish⛔️'],
+                                        ['text' => 'Tasdiqlash✅', 'callback_data' => "confirm_{$chat_id}"],
+                                        ['text' => 'Bekor qilish⛔️', 'callback_data' => "cancel_{$chat_id}"],
                                     ]
-                                ],
-                                'resize_keyboard' => true,
-                                'one_time_keyboard' => true,
+                                ]
                             ];
                             $this->store($admin->chat_id, $userData, $replyMarkup);
                         } else {
@@ -174,24 +197,6 @@ class BotController extends Controller
                 } else {
                     $this->store($chat_id, "Iltimos, rasm yuboring!");
                 }
-                return;
-            }
-            if ($text === 'Tasdiqlash✅') {
-                Log::info('keldi');
-                $user = User::latest()->first()->update([
-                    'status' => '1',
-                ]);
-                $this->store(User::where('role', 'admin')->first()->chat_id, "Yangi user ro'yxatdan to'liq o'tdi!");
-                Log::info($user);
-                return;
-            }
-
-            if ($text === 'Bekor qilish⛔️') {
-                $user = User::latest()->first()->update([
-                    'status' => '0',
-                ]);
-                $this->store(User::where('role', 'admin')->first()->chat_id, "Yangi user to'liq o'tmadi");
-                Log::info($user);
                 return;
             }
 
@@ -224,11 +229,19 @@ class BotController extends Controller
             }
             if ($text === 'Login') {
                 Cache::put("login_step_{$chat_id}", 'email');
-                $this->store($chat_id, "Iltimos, emailingizni kiriting:");
+                $this->store($chat_id, "Iltimos, emailingizni kiriting:", [
+                    'remove_keyboard' => true,
+                ]);
+
                 return;
             }
 
             if (Cache::get("login_step_{$chat_id}") === 'email') {
+                if (!filter_var($text, FILTER_VALIDATE_EMAIL)) {
+                    $this->store($chat_id, "Iltimos, haqiqiy email manzil kiriting!");
+                    return;
+                }
+
                 Cache::put("login_email_{$chat_id}", $text);
                 Cache::put("login_step_{$chat_id}", 'password');
                 $this->store($chat_id, "Iltimos, parolingizni kiriting:");
@@ -237,6 +250,8 @@ class BotController extends Controller
 
             if (Cache::get("login_step_{$chat_id}") === 'password') {
                 Cache::put("login_password_{$chat_id}", $text);
+
+                $this->del($message_id, $chat_id);
 
                 $email = Cache::get("login_email_{$chat_id}");
                 $password = Cache::get("login_password_{$chat_id}");
@@ -283,7 +298,7 @@ class BotController extends Controller
                         $counter++;
                     }
 
-                    $this->store($chat_id, $userList . "\nIltimos, foydalanuvchi raqamini kiriting, uning statusini false qilish uchun.");
+                    $this->store($chat_id, $userList . "\nIltimos, foydalanuvchi raqamini kiriting, uning statusini teskari qilish uchun.");
                 }
             }
 
@@ -301,11 +316,11 @@ class BotController extends Controller
                         $counter++;
                     }
 
-                    $this->store($chat_id, $userList . "\nIltimos, foydalanuvchi raqamini kiriting, uning statusini true qilish uchun.");
+                    $this->store($chat_id, $userList . "\nIltimos, foydalanuvchi raqamini kiriting, uning statusini teskari qilish uchun.");
                 }
             }
 
-            if (is_numeric($text)) {
+            if (is_numeric($text) && $text > 0 && $text <= count(User::where('role', '!=', 'admin')->get())) {
                 $userIndex = (int) $text - 1;
 
                 $allUsers = User::where('role', '!=', 'admin')->get();
@@ -321,6 +336,61 @@ class BotController extends Controller
                     $this->store($chat_id, "Bunday foydalanuvchi topilmadi. Iltimos, to'g'ri raqamni kiriting.");
                 }
             }
+            if ($call) {
+                $calldata = $call['data'];
+
+                if (Str::startsWith($calldata, 'confirm_')) {
+                    $call_id = Str::after($calldata, 'confirm_');
+                    $user = User::where('chat_id', $call_id)->first();
+
+                    if ($user) {
+                        $user->status = 1;
+                        $user->save();
+
+                        $this->store($call_id, "Sizning profilingiz admin tomonidan tasdiqlandi! Endi tizimdan foydalanishingiz mumkin.");
+                        $this->store(User::where('role', 'admin')->first()->chat_id, "Foydalanuvchi muvaffaqiyatli tasdiqlandi.");
+                    } else {
+                        $this->store(User::where('role', 'admin')->first()->chat_id, "Foydalanuvchini topib bo'lmadi.");
+                    }
+                    return;
+                }
+
+                if (Str::startsWith($calldata, 'cancel_')) {
+                    $call_id = Str::after($calldata, 'cancel_');
+                    $user = User::where('chat_id', $call_id)->first();
+
+                    if ($user) {
+                        $user->delete();
+                        $this->store($call_id, "Sizning profilingiz admin tomonidan bekor qilindi.");
+                        $this->store(User::where('role', 'admin')->first()->chat_id, "Foydalanuvchi muvaffaqiyatli o'chirildi.");
+                    } else {
+                        $this->store(User::where('role', 'admin')->first()->chat_id, "Foydalanuvchini topib bo'lmadi.");
+                    }
+                    return;
+                }
+
+                if (Str::startsWith($calldata, 'accept')) {
+                    Log::info('accept');
+                    $userId = Str::after($calldata, 'accept_');
+                    $user = User::find($userId);
+                    if ($user) {
+                        $this->removeInlineKeyboard($callmid, $user->chat_id);
+                        $this->store($user->chat_id,'Buyurtma muvaffaqiyatli qabul qilindi');
+                    } else {
+                        $this->store($user->chat_id, "Buyurtma topilmadi.");
+                    }
+                } elseif (Str::startsWith($calldata, 'reject')) {
+                    Log::info('reject');
+                    $userId = Str::after($calldata, 'reject_');
+                    $user = User::find($userId);
+                    if ($user) {
+                        $this->del($callmid, $user->chat_id);
+                        $this->store($user->chat_id, "Buyurtma rad etildi.");
+                    } else {
+                        $this->store($user->chat_id, "Buyurtma topilmadi.");
+                    }
+                }
+            }
         } catch (\Exception $exception) {
             Log::error($exception);
             return response()->json([
@@ -329,4 +399,36 @@ class BotController extends Controller
             ]);
         }
     }
+    public function del($message_id, $chat_id)
+    {
+        $token = "https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN');
+        $payload = [
+            'chat_id' => $chat_id,
+            'message_id' => $message_id
+        ];
+        Http::post($token . '/deletemessage', $payload);
+    }
+    public function edit($message_id, $chat_id, $new_message)
+    {
+        $token = "https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN');
+        $payload = [
+            'chat_id' => $chat_id,
+            'message_id' => $message_id,
+            'text' => $new_message,
+            'parse_mode' => 'HTML',
+        ];
+        Http::post($token . '/editMessageText', $payload);
+    }
+
+    public function removeInlineKeyboard($message_id, $chat_id)
+    {
+        $token = "https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN');
+        $payload = [
+            'chat_id' => $chat_id,
+            'message_id' => $message_id,
+            'reply_markup' => json_encode(['inline_keyboard' => []])
+        ];
+        Http::post($token . '/editMessageReplyMarkup', $payload);
+    }
+
 }

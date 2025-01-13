@@ -19,6 +19,9 @@
                 <button type="submit" class="btn btn-danger">Logout</button>
             </form>
         </div>
+        <ul class="list-group mb-3">
+            <a href="{{ route('meal.index') }}">Meal</a>
+        </ul>
 
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
