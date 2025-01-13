@@ -375,7 +375,7 @@ class BotController extends Controller
                     $user = User::find($userId);
                     if ($user) {
                         $this->removeInlineKeyboard($callmid, $user->chat_id);
-                        $this->store($user->chat_id,'Buyurtma muvaffaqiyatli qabul qilindi');
+                        $this->store($user->chat_id, 'Buyurtma muvaffaqiyatli qabul qilindi');
                     } else {
                         $this->store($user->chat_id, "Buyurtma topilmadi.");
                     }
@@ -385,6 +385,7 @@ class BotController extends Controller
                     $user = User::find($userId);
                     if ($user) {
                         $this->del($callmid, $user->chat_id);
+                        $this->delLocation($callmid + 1,$user->chat_id);
                         $this->store($user->chat_id, "Buyurtma rad etildi.");
                     } else {
                         $this->store($user->chat_id, "Buyurtma topilmadi.");
@@ -430,5 +431,13 @@ class BotController extends Controller
         ];
         Http::post($token . '/editMessageReplyMarkup', $payload);
     }
-
+    public function delLocation($message_id, $chat_id)
+    {
+        $token = "https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN');
+        $payload = [
+            'chat_id' => $chat_id,
+            'message_id' => $message_id
+        ];
+        Http::post($token . '/deletemessage', $payload);
+    }
 }

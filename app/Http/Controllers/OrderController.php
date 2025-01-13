@@ -16,7 +16,7 @@ class OrderController extends Controller
         $cart = session('cart', []);
         $ids = is_array($cart) ? array_keys($cart) : [];
         $models = Meal::whereIn('id', $ids)->get();
-        $users = User::all();
+        $users = User::where('status','=',1)->get();
         return view('card', compact('models', 'users'));
     }
 
