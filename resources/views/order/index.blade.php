@@ -19,6 +19,8 @@
 
         table {
             border-radius: 10px;
+            table-layout: fixed;
+            width: 100%;
         }
 
         th {
@@ -38,6 +40,9 @@
         .table th {
             vertical-align: middle;
             text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .btn-custom {
@@ -61,26 +66,28 @@
         <div class="row">
             <div class="col-md-12">
                 <h1 class="text-center mb-4">Orders List</h1>
-                <table class="table table-bordered table-hover text-center">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Username</th>
-                            <th>Address</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($orders as $order)
-                            <tr id="orders-table">
-                                <td>{{ $order->id }}</td>
-                                <td>{{ $order->user->name }}</td>
-                                <td>{{ $order->address }}</td>
-                                <td>{{ $order->status }}</td>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover text-center">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Address</th>
+                                <th>Status</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($orders as $order)
+                                <tr id="orders-table">
+                                    <td>{{ $order->id }}</td>
+                                    <td>{{ $order->user->name }}</td>
+                                    <td>{{ $order->address }}</td>
+                                    <td>{{ $order->status }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
                 <div class="text-center">
                     <button class="btn btn-custom" onclick="window.location.reload();">Refresh Orders</button>
                 </div>

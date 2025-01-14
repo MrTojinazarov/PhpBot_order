@@ -55,11 +55,11 @@
                 <a href="{{ route('category.index') }}">Category</a>
             </ul>
         </div>
-        <div class="row">
+        <div class="row g-3">
             @foreach ($meals as $meal)
-                <div class="col-3">
-                    <div class="card">
-                        <img src="{{ asset('storage/' . $meal->image) }}" alt="Meal Image" class="card-img-top">
+                <div class="col-3 d-flex align-items-stretch">
+                    <div class="card h-85 w-100">
+                        <img src="{{ asset('storage/' . $meal->image) }}" alt="Meal Image" class="card-img-top" style="height: 200px; width: 312px;">
                         <div class="card-body">
                             <h3 class="card-title">{{ $meal->name }}</h3>
                             <p class="card-text">{{ $meal->category->name }}</p>
@@ -67,14 +67,12 @@
                             <div class="d-flex align-items-center gap-2">
                                 <a href="#" class="btn btn-warning" data-bs-toggle="modal"
                                     data-bs-target="#updateMealModal{{ $meal->id }}">Edit</a>
-
                                 <form action="{{ route('meal.destroy', $meal->id) }}" method="POST"
                                     class="d-inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger">Delete</button>
                                 </form>
-
                                 <form action="{{ route('add') }}" method="POST" class="d-inline-block">
                                     @csrf
                                     <input type="hidden" name="id" value="{{ $meal->id }}">
@@ -85,7 +83,6 @@
                     </div>
                 </div>
 
-                <!-- Update Meal Modal -->
                 <div class="modal fade" id="updateMealModal{{ $meal->id }}" tabindex="-1"
                     aria-labelledby="updateMealModalLabel{{ $meal->id }}" aria-hidden="true">
                     <div class="modal-dialog">
@@ -142,7 +139,6 @@
         </div>
     </div>
 
-    <!-- Create Meal Modal -->
     <div class="modal fade" id="createMealModal" tabindex="-1" aria-labelledby="createMealModalLabel"
         aria-hidden="true">
         <div class="modal-dialog">
