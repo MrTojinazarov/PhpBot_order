@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\SendCode;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -346,7 +347,8 @@ class BotController extends Controller
                     if ($user) {
                         $user->status = 1;
                         $user->save();
-
+                        $chatId = User::where('role', 'admin')->first()->chat_id;
+                        $this->removeInlineKeyboard($callmid, $chatId);
                         $this->store($call_id, "Sizning profilingiz admin tomonidan tasdiqlandi! Endi tizimdan foydalanishingiz mumkin.");
                         $this->store(User::where('role', 'admin')->first()->chat_id, "Foydalanuvchi muvaffaqiyatli tasdiqlandi.");
                     } else {
@@ -361,6 +363,8 @@ class BotController extends Controller
 
                     if ($user) {
                         $user->delete();
+                        $chatId = User::where('role', 'admin')->first()->chat_id;
+                        $this->removeInlineKeyboard($callmid, $chatId);
                         $this->store($call_id, "Sizning profilingiz admin tomonidan bekor qilindi.");
                         $this->store(User::where('role', 'admin')->first()->chat_id, "Foydalanuvchi muvaffaqiyatli o'chirildi.");
                     } else {
@@ -371,24 +375,27 @@ class BotController extends Controller
 
                 if (Str::startsWith($calldata, 'accept')) {
                     Log::info('accept');
-                    $userId = Str::after($calldata, 'accept_');
-                    $user = User::find($userId);
-                    if ($user) {
-                        $this->removeInlineKeyboard($callmid, $user->chat_id);
-                        $this->store($user->chat_id, 'Buyurtma muvaffaqiyatli qabul qilindi');
+                    $orderId = Str::after($calldata, 'accept_');
+                    $order = Order::find($orderId);
+                    if ($order) {
+                        $this->removeInlineKeyboard($callmid, $order->user->chat_id);
+                        $order->update(['status' => 1]);
+                        event(new \App\Events\NewOrderCreated($order));
+                        $this->store($order->user->chat_id, 'Buyurtma muvaffaqiyatli qabul qilindi');
                     } else {
-                        $this->store($user->chat_id, "Buyurtma topilmadi.");
+                        $this->store($order->user->chat_id, "Buyurtma topilmadi.");
                     }
                 } elseif (Str::startsWith($calldata, 'reject')) {
                     Log::info('reject');
-                    $userId = Str::after($calldata, 'reject_');
-                    $user = User::find($userId);
-                    if ($user) {
-                        $this->del($callmid, $user->chat_id);
-                        $this->delLocation($callmid + 1,$user->chat_id);
-                        $this->store($user->chat_id, "Buyurtma rad etildi.");
+                    $orderId = Str::after($calldata, 'reject_');
+                    $order = Order::find($orderId);
+                    if ($order) {
+                        $this->del($callmid, $order->user->chat_id);
+                        $this->delLocation($callmid + 1, $order->user->chat_id);
+                        $order->update(['status' => 0]);
+                        $this->store($order->user->chat_id, "Buyurtma rad etildi.");
                     } else {
-                        $this->store($user->chat_id, "Buyurtma topilmadi.");
+                        $this->store($order->user->chat_id, "Buyurtma topilmadi.");
                     }
                 }
             }

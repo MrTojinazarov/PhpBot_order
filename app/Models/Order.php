@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    protected $fillable = ['user_id','address','time'];
+    protected $fillable = ['user_id','address','time','status'];
 
-    public function users()
+    public function user()
     {
         return $this->belongsTo(User::class,'user_id');
     }

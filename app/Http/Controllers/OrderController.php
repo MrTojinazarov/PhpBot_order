@@ -93,8 +93,8 @@ class OrderController extends Controller
         $keyboard = [
             'inline_keyboard' => [
                 [
-                    ['text' => '✅ Qabul qilish', 'callback_data' => 'accept_' . $user->id],
-                    ['text' => '❌ Rad etish', 'callback_data' => 'reject_' . $user->id]
+                    ['text' => '✅ Qabul qilish', 'callback_data' => 'accept_' . $order->id],
+                    ['text' => '❌ Rad etish', 'callback_data' => 'reject_' . $order->id]
                 ]
             ]
         ];
