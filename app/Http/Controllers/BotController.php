@@ -37,6 +37,7 @@ class BotController extends Controller
     {
         try {
             $data = $request->all();
+            Log::info($data);
             $chat_id = $data['message']['chat']['id'] ?? null;
             $text = $data['message']['text'] ?? null;
             $photo = $data['message']['photo'] ?? null;
